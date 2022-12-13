@@ -376,11 +376,20 @@ class NestedSimpleStringQueryBackend(NestedQueryBackend):
         return highlight_fields
 
     @classmethod
+    def escape_double_quotes(self, query_params):
+        cleaned_params = []
+        for param in query_params:
+            param = param.replace('\\','\\\\').replace('"',r'\"')
+            cleaned_params.append(param)
+        return cleaned_params
+
+    @classmethod
     def construct_search(cls, request, view, search_backend):
         if not hasattr(view, 'search_nested_fields'):
             return []
 
-        query_params = search_backend.get_search_query_params(request, view)
+        raw_query_params = search_backend.get_search_query_params(request, view)
+        query_params = NestedSimpleStringQueryBackend.escape_double_quotes(raw_query_params)
 
         __queries = []
 
