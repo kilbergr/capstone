@@ -5,6 +5,7 @@ import json
 import requests
 from botocore.exceptions import ClientError
 from collections import namedtuple
+from celery import group, shared_task
 
 from capapi.documents import CaseDocument
 from capapi.serializers import (
@@ -139,20 +140,28 @@ def export_cases_to_s3(bucket: str, redacted: bool, reporter_id: str) -> tuple:
 
     # get in-scope volumes with volume numbers in each reporter
     subset_volumes_metadata = ""
-    for volume in (
-        reporter.volumes.exclude(volume_number=None)
-        .exclude(volume_number="")
-        .exclude(out_of_scope=True)
-    ):
-        # export volume metadata/cases
-        volume_metadata = export_cases_by_volume(
-            volume, reporter_prefix, bucket, redacted
+
+    volumes_metadata = group(
+        export_cases_by_volume.s(
+            volume=volume,
+            reporter_prefix=reporter_prefix,
+            dest_bucket=bucket,
+            redacted=redacted,
         )
+        for volume in (
+            reporter.volumes.exclude(volume_number=None)
+            .exclude(volume_number="")
+            .exclude(out_of_scope=True)
+        )
+    )()
+
+    for volume_metadata in volumes_metadata.get():
         subset_volumes_metadata += volume_metadata
 
     return (reporter_metadata, subset_volumes_metadata)
 
 
+@shared_task
 def export_cases_by_volume(
     volume: object, reporter_prefix: str, dest_bucket: str, redacted: bool
 ) -> str:

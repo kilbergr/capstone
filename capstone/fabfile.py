@@ -472,10 +472,9 @@ def export_reporters_to_s3():
 @task
 def export_reporters_to_s3_trial():
     """
-    Run export of all reporters  and their contents to S3
-    for first API page.
+    Run export of first page of reporters and their contents to S3.
     """
-    convert_s3.put_reporters_on_s3_trial(redacted=True)
+    convert_s3.put_reporters_on_s3_trial(redacted=False)
 
 
 @task
