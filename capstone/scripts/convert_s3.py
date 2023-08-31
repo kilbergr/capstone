@@ -141,7 +141,7 @@ def export_cases_to_s3(bucket: str, redacted: bool, reporter_id: str) -> tuple:
     # get in-scope volumes with volume numbers in each reporter
     subset_volumes_metadata = ""
 
-    volumes_metadata = group(
+    job = group(
         export_cases_by_volume.s(
             volume=volume,
             reporter_prefix=reporter_prefix,
@@ -153,7 +153,8 @@ def export_cases_to_s3(bucket: str, redacted: bool, reporter_id: str) -> tuple:
             .exclude(volume_number="")
             .exclude(out_of_scope=True)
         )
-    )()
+    )
+    volumes_metadata = job.apply_async()
 
     for volume_metadata in volumes_metadata.get():
         subset_volumes_metadata += volume_metadata
